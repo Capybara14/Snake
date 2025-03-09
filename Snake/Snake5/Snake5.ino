@@ -2,7 +2,7 @@
 #include <Adafruit_ST7735.h>
 #include <SPI.h>
 
-#define dfc 400            // устанавливает длину игрового тика
+#define dfc 300            // устанавливает длину игрового тика
 #define len 5              // устанавливает начальную длину змеи
 #define SnakeColor 0x07e0  // цвет змеи (rbg565)
 #define AppleColor 0xf800  // цвет яблока
@@ -36,7 +36,6 @@ byte n = 0;
 
 
 void setup() {
-  Serial.begin(9600);
   tft.initR(INITR_MINI160x80_PLUGIN);
   tft.setRotation(3);
   pinMode(A2, INPUT_PULLUP);
@@ -45,8 +44,9 @@ void setup() {
 
 
 void loop() {
+
   direction_reader();
-  Serial.println(headCoordinateX);
+
   if (millis() - timer >= difficult && direction != 4) {
     switch (direction) {
       case 0:
@@ -62,24 +62,45 @@ void loop() {
         flatHeadCoordinate = flatHeadCoordinate - 1;
         break;
     }
-    for (int i = 0; i <= length; i++) {
-      head_coordinates[i] = head_coordinates[i + 1];  // передвигает старые значения головы
-      if (flatHeadCoordinate == head_coordinates[i]) {
-        loss();
-        break;
-      }                                                   // врезание в себя рестартит
-      if (flatHeadCoordinate == Apples_coordinates[i]) {  // поедание яблок
-        length++;
-        Apples_coordinates[i] = 0;
-        applesCounter--;
-      }
-    }
-    head_coordinates[length] = flatHeadCoordinate;
 
     int headCoordinateXOld;
     headCoordinateXOld = headCoordinateX;
-
     coordinate_counter();
+
+    if (millis() - timer1 >= 5000 && applesCounter < AppleMax) {  // спавнит яблоки
+      randomSeed(analogRead(A7));
+      FlatAppleCoordinate = random(0, 512);
+      for (int i = 0; i <= length; i++) {  // не позволяет яблоку заспавнится внутри змеи
+        if (FlatAppleCoordinate == head_coordinates[i] || FlatAppleCoordinate == Apples_coordinates[i]) { FlatAppleCoordinate = random(0, 512); }
+      }
+      for (int i = 0; i < AppleMax; i++) {  // если находит, то заполняет пустую ячейку в массиве с координатами яблок новой координатой яблока
+        if (Apples_coordinates[i] == 0) {
+          Apples_coordinates[i] = FlatAppleCoordinate;
+          break;
+        }
+      }
+      timer1 = millis();
+      coordinate_counter();
+      tft.fillRect(AppleX, AppleY, 5, 5, AppleColor);
+      applesCounter++;
+    }
+
+    for (int i = 0; i <= length; i++) {
+      head_coordinates[i] = head_coordinates[i + 1];                  // передвигает старые значения головы
+      if (flatHeadCoordinate == head_coordinates[i] && i < length) {  // врезание в себя рестартит
+        loss();
+        break;
+      }
+    }
+    for (int i = 0; i <= AppleMax; i++) {  // поедание яблок
+      if (flatHeadCoordinate == Apples_coordinates[i]) {
+        length = length + 2;
+        applesCounter--;
+        Apples_coordinates[i] = 0;
+      }
+    }
+
+    head_coordinates[length] = flatHeadCoordinate;
 
     if (headCoordinateY < 0 || headCoordinateY > 79) { loss(); }
     if (abs(headCoordinateX - headCoordinateXOld) > 10) { loss(); }
@@ -89,26 +110,8 @@ void loop() {
     timer = millis();
     n = 0;
   }
-
-  if (millis() - timer1 >= 5000 && applesCounter < AppleMax) {  // спавнит яблоки
-    randomSeed(analogRead(A7));
-    FlatAppleCoordinate = random(0, 800);
-    for (int i = 0; i <= length; i++) {  // не позволяет яблоку заспавнится внутри змеи
-      if (FlatAppleCoordinate == head_coordinates[i]) { FlatAppleCoordinate = random(0, 800); }
-    }
-    for (int i = 0; i < AppleMax; i++) {  // если находит, то заполняет пустую ячейку в массиве с координатами яблок новой координатой яблока
-      if (Apples_coordinates[i] == 0) {
-        Apples_coordinates[i] = FlatAppleCoordinate;
-        break;
-      }
-    }
-
-    applesCounter++;
-    timer1 = millis();
-    coordinate_counter();
-    tft.fillRect(AppleX, AppleY, 5, 5, AppleColor);
-  }
 }
+
 
 
 void direction_reader() {
@@ -117,20 +120,20 @@ void direction_reader() {
     difficult = dfc;
   }
 
-  if (analogRead(A0) <= 50 && direction != 3 && n <= 2) {
+  if (analogRead(A0) <= 50 && direction != 3 && n <= 2 && direction != 1) {
     direction = 1;
     n++;
   }  //обработка джойстика VRY
-  else if (analogRead(A0) >= 1000 && direction != 1 && n <= 2) {
+  else if (analogRead(A0) >= 1000 && direction != 1 && n <= 2 && direction != 3) {
     direction = 3;
     n++;
   }
 
-  if (analogRead(A1) <= 50 && direction != 2 && n <= 2) {
+  if (analogRead(A1) <= 50 && direction != 2 && n <= 2 && direction != 0) {
     direction = 0;
     n++;
   }  //обработка джойстика VRX
-  else if (analogRead(A1) >= 1000 && direction != 0 && n <= 2) {
+  else if (analogRead(A1) >= 1000 && direction != 0 && n <= 2 && direction != 2) {
     direction = 2;
     n++;
   }
@@ -161,6 +164,9 @@ void loss() {
 
 
 void restart() {
+  for (int i = 0; i <= AppleMax; i++) {
+    Apples_coordinates[i] = 0;
+  }
   difficult = dfc;
   length = len;
   direction = 4;
