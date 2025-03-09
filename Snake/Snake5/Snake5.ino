@@ -2,11 +2,12 @@
 #include <Adafruit_ST7735.h>
 #include <SPI.h>
 
-#define dfc 300            // устанавливает длину игрового тика
+#define dfc 250            // устанавливает длину игрового тика
 #define len 5              // устанавливает начальную длину змеи
 #define SnakeColor 0x07e0  // цвет змеи (rbg565)
 #define AppleColor 0xf800  // цвет яблока
 #define AppleMax 5         // максимальное число яблок на поле
+#define plus 10            // столько получает очков за сбор каждого яблока
 
 Adafruit_ST7735 tft = Adafruit_ST7735(8, 9, 10);
 
@@ -94,7 +95,7 @@ void loop() {
     }
     for (int i = 0; i <= AppleMax; i++) {  // поедание яблок
       if (flatHeadCoordinate == Apples_coordinates[i]) {
-        length = length + 2;
+        length = length + plus;
         applesCounter--;
         Apples_coordinates[i] = 0;
       }
