@@ -7,13 +7,13 @@
 #define SnakeColor 0x07e0  // цвет змеи (rbg565)
 #define AppleColor 0xf800  // цвет яблока
 #define AppleMax 5         // максимальное число яблок на поле
-#define plus 10            // столько получает очков за сбор каждого яблока
+#define plus 1             // столько получает очков за сбор каждого яблока
 
 Adafruit_ST7735 tft = Adafruit_ST7735(8, 9, 10);
 
 byte direction;  // 0 - вниз, 1 - вправо, 2 - вверх, 3 - влево
 
-int length;
+int length = 0;
 int head_coordinates[512]{};
 int Apples_coordinates[AppleMax]{};
 
@@ -37,6 +37,7 @@ byte n = 0;
 
 
 void setup() {
+  Serial.begin(9600);
   tft.initR(INITR_MINI160x80_PLUGIN);
   tft.setRotation(3);
   pinMode(A2, INPUT_PULLUP);
@@ -64,15 +65,14 @@ void loop() {
         break;
     }
 
-    int headCoordinateXOld;
-    headCoordinateXOld = headCoordinateX;
+    int headCoordinateXOld = headCoordinateX;
     coordinate_counter();
 
     if (millis() - timer1 >= 5000 && applesCounter < AppleMax) {  // спавнит яблоки
       randomSeed(analogRead(A7));
       FlatAppleCoordinate = random(0, 512);
       for (int i = 0; i <= length; i++) {  // не позволяет яблоку заспавнится внутри змеи
-        if (FlatAppleCoordinate == head_coordinates[i] || FlatAppleCoordinate == Apples_coordinates[i]) { FlatAppleCoordinate = random(0, 512); }
+        while (FlatAppleCoordinate == head_coordinates[i] || FlatAppleCoordinate == Apples_coordinates[i]) { FlatAppleCoordinate = random(0, 512); }
       }
       for (int i = 0; i < AppleMax; i++) {  // если находит, то заполняет пустую ячейку в массиве с координатами яблок новой координатой яблока
         if (Apples_coordinates[i] == 0) {
@@ -87,8 +87,10 @@ void loop() {
     }
 
     for (int i = 0; i <= length; i++) {
-      head_coordinates[i] = head_coordinates[i + 1];                  // передвигает старые значения головы
-      if (flatHeadCoordinate == head_coordinates[i] && i < length) {  // врезание в себя рестартит
+      head_coordinates[i] = head_coordinates[i + 1];  // передвигает старые значения головы
+    }
+    for (int i = 0; i < length; i++) {
+      if (flatHeadCoordinate == head_coordinates[i] && flatHeadCoordinate != 0) {  // врезание в себя рестартит
         loss();
         break;
       }
@@ -158,26 +160,23 @@ void loss() {
   tft.setCursor(25, 20);
   tft.setTextColor(0xffff);
   tft.setTextSize(6);
-  tft.print(length - len);
+  tft.print(length - len + 1);
   delay(5000);
   restart();
 }
 
 
 void restart() {
-  for (int i = 0; i <= AppleMax; i++) {
-    Apples_coordinates[i] = 0;
-  }
+  memset(Apples_coordinates, 0, AppleMax);
+  memset(head_coordinates, 0, 512);
   difficult = dfc;
-  length = len;
+  length = len - 1;
   direction = 4;
   tft.fillScreen(0);
   tft.fillRect(80, 40, 5, 5, SnakeColor);
   flatHeadCoordinate = 272;
-  for (int i = 0; i <= length; i++) { head_coordinates[i] = 0; }
   head_coordinates[length] = 272;
   applesCounter = 0;
-  coordinate_counter();
   n = 0;
-  loop();
+  coordinate_counter();
 }
