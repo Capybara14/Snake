@@ -68,7 +68,7 @@ void loop() {
     int headCoordinateXOld = headCoordinateX;
     coordinate_counter();
 
-    if (millis() - timer1 >= 5000 && applesCounter < AppleMax) {  // спавнит яблоки
+    if (millis() - timer1 >= 5000 && applesCounter < AppleMax || applesCounter == 0) {  // спавнит яблоки
       randomSeed(analogRead(A7));
       FlatAppleCoordinate = random(0, 512);
       for (int i = 0; i <= length; i++) {  // не позволяет яблоку заспавнится внутри змеи
